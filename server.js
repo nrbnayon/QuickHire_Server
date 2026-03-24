@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
 const os = require('os');
+const axios = require('axios');
 const connectDB = require('./config/db');
 
 // Route files
@@ -58,3 +59,26 @@ app.listen(PORT, () => {
   console.log(`Local:            http://localhost:${PORT}`);
   console.log(`On Your Network:  http://${localIp}:${PORT}`);
 });
+
+// Keep-Alive Ping (Self-pinging to reduce sleeping)
+const SERVICE_URL = process.env.SELF_PING_URL || process.env.RENDER_EXTERNAL_URL;
+
+const keepAlive = () => {
+  if (!SERVICE_URL) {
+    console.warn('SELF_PING_URL or RENDER_EXTERNAL_URL is not set. Keep-alive ping is disabled.');
+    return;
+  }
+
+  setInterval(async () => {
+    try {
+      await axios.get(SERVICE_URL);
+      console.log('Keep-alive ping successful');
+    } catch (error) {
+      console.error('Keep-alive ping failed:', error.message);
+    }
+  }, 14 * 60 * 1000);
+};
+
+if (process.env.NODE_ENV === 'production') {
+  keepAlive();
+}
